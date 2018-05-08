@@ -1,0 +1,88 @@
+#!/bin/bash
+
+usage()  
+{  
+  echo "
+Usage: socks COMMAND  
+
+Commands:
+  on        Turn on socks proxy 
+  off       Turn off socks proxy
+  status    Show status of socks proxy 
+  location  Show location of socks proxy 
+    " 
+  exit 1  
+} 
+
+PORT=8078
+
+killsshonport()
+{
+  ps aux | grep "$PORT" | grep -v grep | awk '{print $2}' | xargs sudo kill -9
+}
+
+setup()
+{
+  killsshonport
+  sudo networksetup -setsocksfirewallproxy Wi-Fi localhost "$PORT" 
+}
+
+
+getPublicIp()
+{
+  if [ "$1" == "1" ]; then
+    IP=$( curl --socks5-hostname localhost:"$PORT" ipinfo.io/ip 2>/dev/null )
+  elif [ "$1" == "2" ]; then
+    IP=$( curl ipinfo.io/ip 2>/dev/null )
+  fi 
+    echo -n 'IP: '
+    echo $IP
+}
+
+getLocation()
+{
+  if [ "$1" == "1" ]; then
+    IP=$( curl --socks5-hostname localhost:"$PORT" ipinfo.io/ip 2>/dev/null )
+    curl --socks5-hostname localhost:"$PORT" ipinfo.io/"$IP"
+  elif [ "$1" == "2" ]; then
+    IP=$( curl ipinfo.io/ip 2>/dev/null )
+    curl ipinfo.io/"$IP"
+  fi 
+  echo
+}
+
+if [ "$#" -ne 1 ]; then
+  usage 
+fi
+
+if [ "$1" == "on" ]; then
+  setup
+  ssh -NfD "$PORT" username@hostname  2> /dev/null 
+  getPublicIp 1
+elif [ "$1" == "off" ]; then
+  sudo networksetup -setsocksfirewallproxystate Wi-Fi off
+  killsshonport
+  getPublicIp 2
+elif [ "$1" == "status" ]; then
+  networksetup -getsocksfirewallproxy Wi-Fi
+  is_enabled=$( networksetup -getsocksfirewallproxy Wi-Fi | grep "Enabled: Yes" )
+  if [ "$is_enabled" == "Enabled: Yes" ]; then
+    echo -n "Executed Command: "
+    ps aux | grep "$PORT" | grep -v grep | awk '{for(i=11;i<=NF;++i)printf "%s ",$i}' 
+    echo ""
+    getPublicIp 1
+  else 
+    getPublicIp 2
+  fi
+elif [ "$1" == "location" ]; then
+  is_enabled=$( networksetup -getsocksfirewallproxy Wi-Fi | grep "Enabled: Yes" )
+  if [ "$is_enabled" == "Enabled: Yes" ]; then
+    getLocation 1
+  else 
+    getLocation 2
+  fi
+else
+  echo "Illegal command."
+fi
+
+
