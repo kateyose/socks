@@ -1,1 +1,1 @@
-You need to change ssh domain and username before use this script.
+You need to change ssh domain and username before using this script.
