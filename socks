@@ -24,7 +24,11 @@ killsshonport()
 setup()
 {
   killsshonport
-  sudo networksetup -setsocksfirewallproxy Wi-Fi localhost "$PORT" 
+  if sudo networksetup -setsocksfirewallproxy Wi-Fi localhost "$PORT" ; then
+    :
+  else 
+    exit
+  fi
 }
 
 
